@@ -1182,9 +1182,8 @@ impl<'b> App<'b> {
     /// ```rust
     /// # use clap::App;
     /// use std::io;
-    /// let mut app = App::new("myprog");
-    /// let mut out = io::stdout();
-    /// app.write_version(&mut out).expect("failed to write to stdout");
+    /// let app = App::new("myprog");
+    /// println!("{}", app.render_version());
     /// ```
     /// [`io::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
     /// [`-V` (short)]: ./struct.App.html#method.version
@@ -1204,9 +1203,8 @@ impl<'b> App<'b> {
     /// ```rust
     /// # use clap::App;
     /// use std::io;
-    /// let mut app = App::new("myprog");
-    /// let mut out = io::stdout();
-    /// app.write_long_version(&mut out).expect("failed to write to stdout");
+    /// let app = App::new("myprog");
+    /// println!("{}", app.render_long_version());
     /// ```
     /// [`io::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
     /// [`-V` (short)]: ./struct.App.html#method.version
@@ -1874,7 +1872,7 @@ impl<'b> App<'b> {
     }
 
     pub(crate) fn _render_version(&self, use_long: bool) -> String {
-        debug!("App::_write_version");
+        debug!("App::_render_version");
 
         let ver = if use_long {
             self.long_version

@@ -2,7 +2,6 @@
 use std::{
     cell::Cell,
     ffi::{OsStr, OsString},
-    io::Write,
 };
 
 // Internal
@@ -476,11 +475,11 @@ where
                                     || lossy_arg.parse::<f64>().is_ok())
                                 {
                                     return Err(ClapError::unknown_argument(
-                                        lossy_arg,
+                                        &lossy_arg,
                                         None,
                                         &*Usage::new(self).create_usage_with_title(&[]),
                                         self.app.color(),
-                                    )?);
+                                    ));
                                 }
                             }
                             ParseResult::Opt(ref id)
@@ -516,12 +515,12 @@ where
                         let cands: Vec<_> =
                             cands.iter().map(|cand| format!("'{}'", cand)).collect();
                         return Err(ClapError::invalid_subcommand(
-                            arg_os.to_string_lossy().into_owned(),
-                            cands.join(" or "),
+                            &arg_os.to_string_lossy(),
+                            &cands.join(" or "),
                             self.app.bin_name.as_ref().unwrap_or(&self.app.name),
                             &*Usage::new(self).create_usage_with_title(&[]),
                             self.app.color(),
-                        )?);
+                        ));
                     }
                 }
             }
@@ -609,7 +608,7 @@ where
                         None,
                         &*Usage::new(self).create_usage_with_title(&[]),
                         self.app.color(),
-                    )?);
+                    ));
                 }
 
                 if !self.is_set(AS::TrailingValues)
@@ -649,7 +648,7 @@ where
                             return Err(ClapError::invalid_utf8(
                                 &*Usage::new(self).create_usage_with_title(&[]),
                                 self.app.color(),
-                            )?);
+                            ));
                         }
                         arg_os.to_string_lossy().into_owned()
                     }
@@ -663,7 +662,7 @@ where
                         return Err(ClapError::invalid_utf8(
                             &*Usage::new(self).create_usage_with_title(&[]),
                             self.app.color(),
-                        )?);
+                        ));
                     }
                     sc_m.add_val_to(&Id::empty_hash(), v.to_os_string(), ValueType::CommandLine);
                 }
@@ -687,25 +686,25 @@ where
                     None,
                     &*Usage::new(self).create_usage_with_title(&[]),
                     self.app.color(),
-                )?);
+                ));
             } else if !has_args || self.is_set(AS::InferSubcommands) && self.has_subcommands() {
                 let cands =
                     suggestions::did_you_mean(&*arg_os.to_string_lossy(), sc_names!(self.app));
                 if !cands.is_empty() {
                     let cands: Vec<_> = cands.iter().map(|cand| format!("'{}'", cand)).collect();
                     return Err(ClapError::invalid_subcommand(
-                        arg_os.to_string_lossy().into_owned(),
-                        cands.join(" or "),
+                        &arg_os.to_string_lossy(),
+                        &cands.join(" or "),
                         self.app.bin_name.as_ref().unwrap_or(&self.app.name),
                         &*Usage::new(self).create_usage_with_title(&[]),
                         self.app.color(),
-                    )?);
+                    ));
                 } else {
                     return Err(ClapError::unrecognized_subcommand(
-                        arg_os.to_string_lossy().into_owned(),
+                        &arg_os.to_string_lossy(),
                         self.app.bin_name.as_ref().unwrap_or(&self.app.name),
                         self.app.color(),
-                    )?);
+                    ));
                 }
             } else {
                 return Err(ClapError::unknown_argument(
@@ -713,7 +712,7 @@ where
                     None,
                     &*Usage::new(self).create_usage_with_title(&[]),
                     self.app.color(),
-                )?);
+                ));
             }
         }
 
@@ -730,15 +729,13 @@ where
                     bn,
                     &Usage::new(self).create_usage_with_title(&[]),
                     self.app.color(),
-                )?);
+                ));
             } else if self.is_set(AS::SubcommandRequiredElseHelp) {
                 debug!("Parser::get_matches_with: SubcommandRequiredElseHelp=true");
                 let message = self.write_help_err()?;
                 return Err(ClapError {
-                    cause: String::new(),
                     message,
                     kind: ErrorKind::MissingArgumentOrSubcommand,
-                    info: None,
                 });
             }
         }
@@ -876,10 +873,10 @@ where
                     }
                 } else {
                     return Err(ClapError::unrecognized_subcommand(
-                        cmd.to_string_lossy().into_owned(),
+                        &cmd.to_string_lossy(),
                         self.app.bin_name.as_ref().unwrap_or(&self.app.name),
                         self.app.color(),
-                    )?);
+                    ));
                 }
 
                 bin_name = format!("{} {}", bin_name, &sc.name);
@@ -1231,7 +1228,7 @@ where
                     None,
                     &*Usage::new(self).create_usage_with_title(&[]),
                     self.app.color(),
-                )?);
+                ));
             }
         }
         Ok(ret)
@@ -1262,7 +1259,7 @@ where
                     opt,
                     &*Usage::new(self).create_usage_with_title(&[]),
                     self.app.color(),
-                )?);
+                ));
             }
             debug!("Found - {:?}, len: {}", v, v.len());
             debug!(
@@ -1277,7 +1274,7 @@ where
                 opt,
                 &*Usage::new(self).create_usage_with_title(&[]),
                 self.app.color(),
-            )?);
+            ));
         } else if needs_eq && min_vals_zero {
             debug!("None and requires equals, but min_vals == 0");
             if !opt.default_missing_vals.is_empty() {
@@ -1624,13 +1621,7 @@ where
             did_you_mean,
             &*Usage::new(self).create_usage_with_title(&*used),
             self.app.color(),
-        )?)
-    }
-
-    // Prints the version to the user and exits if quit=true
-    fn print_version<W: Write>(&self, w: &mut W, use_long: bool) -> ClapResult<()> {
-        self.app._write_version(w, use_long)?;
-        w.flush().map_err(ClapError::from)
+        ))
     }
 
     pub(crate) fn write_help_err(&self) -> ClapResult<Colorizer> {
@@ -1653,10 +1644,8 @@ where
         match Help::new(HelpWriter::Buffer(&mut c), self, use_long).write_help() {
             Err(e) => e,
             _ => ClapError {
-                cause: String::new(),
                 message: c,
                 kind: ErrorKind::HelpDisplayed,
-                info: None,
             },
         }
     }
@@ -1664,16 +1653,12 @@ where
     fn version_err(&self, use_long: bool) -> ClapError {
         debug!("Parser::version_err");
 
-        let mut c = Colorizer::new(false, self.app.color());
-
-        match self.print_version(&mut c, use_long) {
-            Err(e) => e,
-            _ => ClapError {
-                cause: String::new(),
-                message: c,
-                kind: ErrorKind::VersionDisplayed,
-                info: None,
-            },
+        let msg = self.app._render_version(use_long);
+        let mut c = Colorizer::new(false, ColorChoice::Never);
+        c.none(msg);
+        ClapError {
+            message: c,
+            kind: ErrorKind::VersionDisplayed,
         }
     }
 }

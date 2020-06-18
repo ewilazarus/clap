@@ -1,5 +1,5 @@
 // std
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::BTreeMap;
 
 // Internal
 use crate::{
@@ -206,9 +206,12 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
                 count
             );
         }
+
         if !self.p.is_set(AS::DontCollapseArgsInUsage) && count > 1 {
             debug!("Usage::get_args_tag:iter: More than one, returning [ARGS]");
-            return None; // [ARGS]
+
+            // [ARGS]
+            None
         } else if count == 1 && incl_reqs {
             let pos = positionals!(self.p.app)
                 .find(|pos| {
@@ -217,21 +220,24 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
                         && !pos.is_set(ArgSettings::Last)
                 })
                 .expect(INTERNAL_ERROR_MSG);
+
             debug!(
                 "Usage::get_args_tag:iter: Exactly one, returning '{}'",
                 pos.name
             );
-            return Some(format!(
+
+            Some(format!(
                 " [{}]{}",
                 pos.name_no_brackets(),
                 pos.multiple_str()
-            ));
+            ))
         } else if self.p.is_set(AS::DontCollapseArgsInUsage)
             && self.p.has_positionals()
             && incl_reqs
         {
             debug!("Usage::get_args_tag:iter: Don't collapse returning all");
-            return Some(
+
+            Some(
                 positionals!(self.p.app)
                     .filter(|pos| !pos.is_set(ArgSettings::Required))
                     .filter(|pos| !pos.is_set(ArgSettings::Hidden))
@@ -239,7 +245,7 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
                     .map(|pos| format!(" [{}]{}", pos.name_no_brackets(), pos.multiple_str()))
                     .collect::<Vec<_>>()
                     .join(""),
-            );
+            )
         } else if !incl_reqs {
             debug!("Usage::get_args_tag:iter: incl_reqs=false, building secondary usage string");
             let highest_req_pos = positionals!(self.p.app)
@@ -252,7 +258,8 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
                 })
                 .max()
                 .unwrap_or_else(|| Some(positionals!(self.p.app).count() as u64));
-            return Some(
+
+            Some(
                 positionals!(self.p.app)
                     .filter_map(|pos| {
                         if pos.index <= highest_req_pos {
@@ -267,9 +274,10 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
                     .map(|pos| format!(" [{}]{}", pos.name_no_brackets(), pos.multiple_str()))
                     .collect::<Vec<_>>()
                     .join(""),
-            );
+            )
+        } else {
+            Some("".into())
         }
-        Some("".into())
     }
 
     // Determines if we need the `[FLAGS]` tag in the usage string
@@ -277,12 +285,16 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
         debug!("Usage::needs_flags_tag");
         'outer: for f in flags!(self.p.app) {
             debug!("Usage::needs_flags_tag:iter: f={}", f.name);
-            if let Some(l) = f.long {
-                if l == "help" || l == "version" {
-                    // Don't print `[FLAGS]` just for help or version
-                    continue;
-                }
+
+            // Don't print `[FLAGS]` just for help or version
+            if f.long == Some("help") || f.long == Some("version") {
+                continue;
             }
+
+            if f.is_set(ArgSettings::Hidden) {
+                continue;
+            }
+
             for grp_s in groups_for_arg!(self.p.app, &f.id) {
                 debug!("Usage::needs_flags_tag:iter:iter: grp_s={:?}", grp_s);
                 if self
@@ -296,9 +308,7 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
                     continue 'outer;
                 }
             }
-            if f.is_set(ArgSettings::Hidden) {
-                continue;
-            }
+
             debug!("Usage::needs_flags_tag:iter: [FLAGS] required");
             return true;
         }
@@ -308,7 +318,7 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
     }
 
     // Returns the required args in usage string form by fully unrolling all groups
-    // `incl_last`: should we incldue args that are Arg::Last? (i.e. `prog [foo] -- [last]). We
+    // `incl_last`: should we include args that are Arg::Last? (i.e. `prog [foo] -- [last]). We
     // can't do that for required usages being built for subcommands because it would look like:
     // `prog [foo] -- [last] <subcommand>` which is totally wrong.
     pub(crate) fn get_required_usage_from(
@@ -316,14 +326,14 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
         incls: &[Id],
         matcher: Option<&ArgMatcher>,
         incl_last: bool,
-    ) -> VecDeque<String> {
+    ) -> Vec<String> {
         debug!(
             "Usage::get_required_usage_from: incls={:?}, matcher={:?}, incl_last={:?}",
             incls,
             matcher.is_some(),
             incl_last
         );
-        let mut ret_val = VecDeque::new();
+        let mut ret_val = Vec::new();
 
         let mut unrolled_reqs = vec![];
 
@@ -377,7 +387,7 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
         for p in pmap.values() {
             debug!("Usage::get_required_usage_from:iter:{:?}", p.id);
             if args_in_groups.is_empty() || !args_in_groups.contains(&p.id) {
-                ret_val.push_back(p.to_string());
+                ret_val.push(p.to_string());
             }
         }
         for a in unrolled_reqs
@@ -395,7 +405,7 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
                 .find(&a)
                 .map(ToString::to_string)
                 .expect(INTERNAL_ERROR_MSG);
-            ret_val.push_back(arg);
+            ret_val.push(arg);
         }
         let mut g_vec: Vec<String> = vec![];
         for g in unrolled_reqs
@@ -421,7 +431,7 @@ impl<'b, 'c, 'z> Usage<'b, 'c, 'z> {
             }
         }
         for g in g_vec {
-            ret_val.push_back(g);
+            ret_val.push(g);
         }
 
         debug!("Usage::get_required_usage_from: ret_val={:?}", ret_val);
